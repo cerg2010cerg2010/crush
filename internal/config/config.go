@@ -15,6 +15,7 @@ import (
 	"charm.land/catwalk/pkg/catwalk"
 	"github.com/charmbracelet/crush/internal/csync"
 	"github.com/charmbracelet/crush/internal/oauth"
+	anthropicoauth "github.com/charmbracelet/crush/internal/oauth/anthropic"
 	"github.com/charmbracelet/crush/internal/oauth/copilot"
 	"github.com/invopop/jsonschema"
 )
@@ -187,6 +188,25 @@ func (c *ProviderConfig) ToProvider() catwalk.Provider {
 
 func (c *ProviderConfig) SetupGitHubCopilot() {
 	maps.Copy(c.ExtraHeaders, copilot.Headers())
+}
+
+// SetupAnthropicOAuth applies the request headers expected by Claude Code
+// subscriber tokens.
+func (c *ProviderConfig) SetupAnthropicOAuth() {
+	if c.ExtraHeaders == nil {
+		c.ExtraHeaders = make(map[string]string)
+	}
+	if v, ok := c.ExtraHeaders[anthropicoauth.HeaderBeta]; ok && v != "" {
+		parts := strings.Split(v, ",")
+		for _, part := range parts {
+			if strings.TrimSpace(part) == anthropicoauth.BetaOAuth {
+				return
+			}
+		}
+		c.ExtraHeaders[anthropicoauth.HeaderBeta] = v + "," + anthropicoauth.BetaOAuth
+		return
+	}
+	c.ExtraHeaders[anthropicoauth.HeaderBeta] = anthropicoauth.BetaOAuth
 }
 
 // HasAPIKey reports whether the provider's api_key resolves to a usable

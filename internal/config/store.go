@@ -17,6 +17,7 @@ import (
 	"github.com/charmbracelet/crush/internal/env"
 	"github.com/charmbracelet/crush/internal/lock"
 	"github.com/charmbracelet/crush/internal/oauth"
+	anthropicoauth "github.com/charmbracelet/crush/internal/oauth/anthropic"
 	"github.com/charmbracelet/crush/internal/oauth/copilot"
 	"github.com/charmbracelet/crush/internal/oauth/hyper"
 	"github.com/charmbracelet/crush/internal/oauth/openai"
@@ -631,7 +632,9 @@ func (s *ConfigStore) SetProviderAPIKey(scope Scope, providerID string, apiKey a
 				return
 			}
 			providerConfig.APIKey = v.AccessToken
-			if providerID == string(catwalk.InferenceProviderCopilot) {
+			if providerID == string(catwalk.InferenceProviderAnthropic) {
+				providerConfig.SetupAnthropicOAuth()
+			} else if providerID == string(catwalk.InferenceProviderCopilot) {
 				providerConfig.SetupGitHubCopilot()
 			}
 		}
@@ -973,6 +976,8 @@ func (s *ConfigStore) exchange(ctx context.Context, providerID, refreshToken str
 		return copilot.RefreshToken(ctx, refreshToken)
 	case string(catwalk.InferenceProviderOpenAI):
 		return openai.RefreshToken(ctx, refreshToken)
+	case string(catwalk.InferenceProviderAnthropic):
+		return anthropicoauth.RefreshToken(ctx, refreshToken)
 	case hyperp.Name:
 		return hyper.ExchangeToken(ctx, refreshToken)
 	default:
@@ -1016,7 +1021,9 @@ func (s *ConfigStore) applyToken(providerConfig ProviderConfig, token *oauth.Tok
 	if providerID != string(catwalk.InferenceProviderOpenAI) {
 		providerConfig.APIKey = token.AccessToken
 	}
-	if providerID == string(catwalk.InferenceProviderCopilot) {
+	if providerID == string(catwalk.InferenceProviderAnthropic) {
+		providerConfig.SetupAnthropicOAuth()
+	} else if providerID == string(catwalk.InferenceProviderCopilot) {
 		providerConfig.SetupGitHubCopilot()
 	}
 	s.Config().Providers.Set(providerID, providerConfig)
